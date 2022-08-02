@@ -26,7 +26,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
       x + y
       """
 
-      Evaluator.evaluate_code(evaluator, code, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, code}, :code_1)
 
       assert_receive {:runtime_evaluation_response, :code_1, {:ok, 3}, metadata() = metadata}
       assert metadata.evaluation_time_ms >= 0
@@ -36,11 +36,11 @@ defmodule Livebook.Runtime.EvaluatorTest do
     end
 
     test "given no base_ref does not see previous evaluation context", %{evaluator: evaluator} do
-      Evaluator.evaluate_code(evaluator, "x = 1", :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, "x = 1"}, :code_1)
       assert_receive {:runtime_evaluation_response, :code_1, _, metadata()}
 
       ignore_warnings(fn ->
-        Evaluator.evaluate_code(evaluator, "x", :code_2)
+        Evaluator.evaluate_code(evaluator, {:elixir, "x"}, :code_2)
 
         assert_receive {:runtime_evaluation_response, :code_2,
                         {:error, _kind,
@@ -51,22 +51,22 @@ defmodule Livebook.Runtime.EvaluatorTest do
     end
 
     test "given base_ref sees previous evaluation context", %{evaluator: evaluator} do
-      Evaluator.evaluate_code(evaluator, "x = 1", :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, "x = 1"}, :code_1)
       assert_receive {:runtime_evaluation_response, :code_1, _, metadata()}
 
-      Evaluator.evaluate_code(evaluator, "x", :code_2, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, "x"}, :code_2, :code_1)
 
       assert_receive {:runtime_evaluation_response, :code_2, {:ok, 1}, metadata()}
     end
 
     test "given invalid base_ref just uses default context", %{evaluator: evaluator} do
-      Evaluator.evaluate_code(evaluator, ":hey", :code_1, :code_nonexistent)
+      Evaluator.evaluate_code(evaluator, {:elixir, ":hey"}, :code_1, :code_nonexistent)
 
       assert_receive {:runtime_evaluation_response, :code_1, {:ok, :hey}, metadata()}
     end
 
     test "captures standard output and sends it to the caller", %{evaluator: evaluator} do
-      Evaluator.evaluate_code(evaluator, ~s{IO.puts("hey")}, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, ~s{IO.puts("hey")}}, :code_1)
 
       assert_receive {:runtime_evaluation_output, :code_1, {:stdout, "hey\n"}}
     end
@@ -81,7 +81,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
       end
       """
 
-      Evaluator.evaluate_code(evaluator, code, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, code}, :code_1)
 
       assert_receive {:runtime_evaluation_input, :code_1, reply_to, "input1"}
       send(reply_to, {:runtime_evaluation_input_reply, {:ok, :value}})
@@ -94,7 +94,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
       List.first(%{})
       """
 
-      Evaluator.evaluate_code(evaluator, code, :code_1, nil, file: "file.ex")
+      Evaluator.evaluate_code(evaluator, {:elixir, code}, :code_1, nil, file: "file.ex")
 
       assert_receive {:runtime_evaluation_response, :code_1,
                       {:error, :error, :function_clause, [{List, :first, _arity, _location}]},
@@ -104,7 +104,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
     test "returns additional metadata when there is a syntax error", %{evaluator: evaluator} do
       code = "1+"
 
-      Evaluator.evaluate_code(evaluator, code, :code_1, nil, file: "file.ex")
+      Evaluator.evaluate_code(evaluator, {:elixir, code}, :code_1, nil, file: "file.ex")
 
       assert_receive {:runtime_evaluation_response, :code_1,
                       {:error, :error, %TokenMissingError{}, []},
@@ -119,7 +119,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
     test "returns additional metadata when there is a compilation error", %{evaluator: evaluator} do
       code = "x"
 
-      Evaluator.evaluate_code(evaluator, code, :code_1, nil, file: "file.ex")
+      Evaluator.evaluate_code(evaluator, {:elixir, code}, :code_1, nil, file: "file.ex")
 
       assert_receive {:runtime_evaluation_response, :code_1,
                       {:error, :error, %CompileError{}, []},
@@ -136,7 +136,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
       Code.eval_string("x")
       """
 
-      Evaluator.evaluate_code(evaluator, code, :code_1, nil, file: "file.ex")
+      Evaluator.evaluate_code(evaluator, {:elixir, code}, :code_1, nil, file: "file.ex")
 
       expected_stacktrace = [{Code, :validated_eval_string, 3, [file: 'lib/code.ex', line: 404]}]
 
@@ -165,7 +165,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
       """
 
       ignore_warnings(fn ->
-        Evaluator.evaluate_code(evaluator, code, :code_1)
+        Evaluator.evaluate_code(evaluator, {:elixir, code}, :code_1)
 
         expected_stacktrace = [
           {Livebook.EvaluatorTest.Stacktrace.Math, :bad_math, 0, [file: 'nofile', line: 3]},
@@ -193,14 +193,14 @@ defmodule Livebook.Runtime.EvaluatorTest do
       x * x
       """
 
-      Evaluator.evaluate_code(evaluator, code1, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, code1}, :code_1)
       assert_receive {:runtime_evaluation_response, :code_1, {:ok, _}, metadata()}
 
-      Evaluator.evaluate_code(evaluator, code2, :code_2, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, code2}, :code_2, :code_1)
 
       assert_receive {:runtime_evaluation_response, :code_2, {:error, _, _, _}, metadata()}
 
-      Evaluator.evaluate_code(evaluator, code3, :code_3, :code_2)
+      Evaluator.evaluate_code(evaluator, {:elixir, code3}, :code_3, :code_2)
       assert_receive {:runtime_evaluation_response, :code_3, {:ok, 4}, metadata()}
     end
 
@@ -210,7 +210,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
       """
 
       opts = [file: "/path/dir/file"]
-      Evaluator.evaluate_code(evaluator, code, :code_1, nil, opts)
+      Evaluator.evaluate_code(evaluator, {:elixir, code}, :code_1, nil, opts)
 
       assert_receive {:runtime_evaluation_response, :code_1, {:ok, "/path/dir"}, metadata()}
     end
@@ -220,13 +220,13 @@ defmodule Livebook.Runtime.EvaluatorTest do
       # The evaluation reference is the same, so the second one overrides
       # the first one and the first widget should eventually be kiled.
 
-      Evaluator.evaluate_code(evaluator, spawn_widget_code(), :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, spawn_widget_code()}, :code_1)
 
       assert_receive {:runtime_evaluation_response, :code_1, {:ok, widget_pid1}, metadata()}
 
       ref = Process.monitor(widget_pid1)
 
-      Evaluator.evaluate_code(evaluator, spawn_widget_code(), :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, spawn_widget_code()}, :code_1)
 
       assert_receive {:runtime_evaluation_response, :code_1, {:ok, widget_pid2}, metadata()}
 
@@ -239,7 +239,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
       # The widget is spawned from a process that terminates,
       # so the widget should terminate immediately as well
 
-      Evaluator.evaluate_code(evaluator, spawn_widget_from_terminating_process_code(), :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, spawn_widget_from_terminating_process_code()}, :code_1)
 
       assert_receive {:runtime_evaluation_response, :code_1, {:ok, widget_pid1}, metadata()}
 
@@ -249,13 +249,13 @@ defmodule Livebook.Runtime.EvaluatorTest do
 
   describe "forget_evaluation/2" do
     test "invalidates the given reference", %{evaluator: evaluator} do
-      Evaluator.evaluate_code(evaluator, "x = 1", :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, "x = 1"}, :code_1)
       assert_receive {:runtime_evaluation_response, :code_1, _, metadata()}
 
       Evaluator.forget_evaluation(evaluator, :code_1)
 
       ignore_warnings(fn ->
-        Evaluator.evaluate_code(evaluator, "x", :code_2, :code_1)
+        Evaluator.evaluate_code(evaluator, {:elixir, "x"}, :code_2, :code_1)
 
         assert_receive {:runtime_evaluation_response, :code_2,
                         {:error, _kind,
@@ -266,7 +266,7 @@ defmodule Livebook.Runtime.EvaluatorTest do
     end
 
     test "kills widgets that no evaluation points to", %{evaluator: evaluator} do
-      Evaluator.evaluate_code(evaluator, spawn_widget_code(), :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, spawn_widget_code()}, :code_1)
 
       assert_receive {:runtime_evaluation_response, :code_1, {:ok, widget_pid1}, metadata()}
 
@@ -289,44 +289,44 @@ defmodule Livebook.Runtime.EvaluatorTest do
 
     test "copies the given context and sets as the initial one",
          %{evaluator: evaluator, parent_evaluator: parent_evaluator} do
-      Evaluator.evaluate_code(parent_evaluator, "x = 1", :code_1)
+      Evaluator.evaluate_code(parent_evaluator, {:elixir, "x = 1"}, :code_1)
       assert_receive {:runtime_evaluation_response, :code_1, _, metadata()}
 
       Evaluator.initialize_from(evaluator, parent_evaluator, :code_1)
 
-      Evaluator.evaluate_code(evaluator, "x", :code_2)
+      Evaluator.evaluate_code(evaluator, {:elixir, "x"}, :code_2)
       assert_receive {:runtime_evaluation_response, :code_2, {:ok, 1}, metadata()}
     end
 
     test "mirrors process dictionary of the given evaluator",
          %{evaluator: evaluator, parent_evaluator: parent_evaluator} do
-      Evaluator.evaluate_code(parent_evaluator, "Process.put(:data, 1)", :code_1)
+      Evaluator.evaluate_code(parent_evaluator, {:elixir, "Process.put(:data, 1)"}, :code_1)
       assert_receive {:runtime_evaluation_response, :code_1, _, metadata()}
 
       Evaluator.initialize_from(evaluator, parent_evaluator, :code_1)
 
-      Evaluator.evaluate_code(evaluator, "Process.get(:data)", :code_2)
+      Evaluator.evaluate_code(evaluator, {:elixir, "Process.get(:data)"}, :code_2)
       assert_receive {:runtime_evaluation_response, :code_2, {:ok, 1}, metadata()}
     end
   end
 
   describe "binding order" do
     test "keeps binding in evaluation order, starting from most recent", %{evaluator: evaluator} do
-      Evaluator.evaluate_code(evaluator, "b = 1", :code_1)
-      Evaluator.evaluate_code(evaluator, "a = 1", :code_2, :code_1)
-      Evaluator.evaluate_code(evaluator, "c = 1", :code_3, :code_2)
-      Evaluator.evaluate_code(evaluator, "x = 1", :code_4, :code_3)
+      Evaluator.evaluate_code(evaluator, {:elixir, "b = 1"}, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, "a = 1"}, :code_2, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, "c = 1"}, :code_3, :code_2)
+      Evaluator.evaluate_code(evaluator, {:elixir, "x = 1"}, :code_4, :code_3)
 
-      {:ok, %{binding: binding}} = Evaluator.fetch_evaluation_context(evaluator, :code_4)
+      {:ok, %{binding: %{elixir: binding}}} = Evaluator.fetch_evaluation_context(evaluator, :code_4)
       assert [:x, :c, :a, :b] == Enum.map(binding, &elem(&1, 0))
     end
 
     test "treats rebound names as new", %{evaluator: evaluator} do
-      Evaluator.evaluate_code(evaluator, "b = 1", :code_1)
-      Evaluator.evaluate_code(evaluator, "a = 1", :code_2, :code_1)
-      Evaluator.evaluate_code(evaluator, "b = 2", :code_3, :code_2)
+      Evaluator.evaluate_code(evaluator, {:elixir, "b = 1"}, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, "a = 1"}, :code_2, :code_1)
+      Evaluator.evaluate_code(evaluator, {:elixir, "b = 2"}, :code_3, :code_2)
 
-      {:ok, %{binding: binding}} = Evaluator.fetch_evaluation_context(evaluator, :code_3)
+      {:ok, %{binding: %{elixir: binding}}} = Evaluator.fetch_evaluation_context(evaluator, :code_3)
       assert [:b, :a] == Enum.map(binding, &elem(&1, 0))
     end
   end
