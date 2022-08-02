@@ -1639,6 +1639,13 @@ defmodule Livebook.Session.Data do
     }
   end
 
+  defp new_cell_info(%Cell.Erlang{}, clients_map) do
+    %{
+      sources: %{primary: new_source_info(clients_map)},
+      eval: new_eval_info()
+    }
+  end
+
   defp new_cell_info(%Cell.Smart{}, clients_map) do
     %{
       sources: %{primary: new_source_info(clients_map), secondary: new_source_info(clients_map)},

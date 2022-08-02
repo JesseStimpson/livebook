@@ -14,7 +14,7 @@ defmodule Livebook.Runtime.Evaluator do
   # amounts of data.
   #
   # Also, note that this process is intentionally not a GenServer,
-  # because during evaluation we it may receive arbitrary messages
+  # because during evaluation it may receive arbitrary messages
   # and we want to keep them in the inbox, while a GenServer would
   # always consume them.
 
@@ -41,7 +41,7 @@ defmodule Livebook.Runtime.Evaluator do
   Each evaluation produces a  new context, which may be optionally
   used by a later evaluation.
   """
-  @type context :: %{binding: Code.binding(), env: Macro.Env.t(), id: binary()}
+  @type context :: %{binding: %{elixir: Code.binding(), erlang: Code.binding()}, env: Macro.Env.t(), id: binary()}
 
   @typedoc """
   A term used to identify evaluation.
@@ -134,7 +134,7 @@ defmodule Livebook.Runtime.Evaluator do
       finished. The function receives `t:evaluation_result/0`
       as an argument
   """
-  @spec evaluate_code(t(), String.t(), ref(), ref() | nil, keyword()) :: :ok
+  @spec evaluate_code(t(), {atom(), String.t()}, ref(), ref() | nil, keyword()) :: :ok
   def evaluate_code(evaluator, code, ref, base_ref \\ nil, opts \\ []) when ref != nil do
     cast(evaluator, {:evaluate_code, code, ref, base_ref, opts})
   end
@@ -306,10 +306,10 @@ defmodule Livebook.Runtime.Evaluator do
   defp initial_context() do
     # TODO: Use Code.env_for_eval and eval_quoted_with_env on Elixir v1.14+
     env = :elixir.env_for_eval([])
-    %{binding: [], env: env, id: random_id()}
+    %{binding: %{elixir: [], erlang: []}, env: env, id: random_id()}
   end
 
-  defp handle_cast({:evaluate_code, code, ref, base_ref, opts}, state) do
+  defp handle_cast({:evaluate_code, {language, code}, ref, base_ref, opts}, state) do
     Evaluator.IOProxy.configure(state.io_proxy, ref)
 
     Evaluator.ObjectTracker.remove_reference(state.object_tracker, {self(), ref})
@@ -319,17 +319,27 @@ defmodule Livebook.Runtime.Evaluator do
     context = put_in(context.env.file, file)
     start_time = System.monotonic_time()
 
-    {result_context, result, code_error} =
-      case eval(code, context.binding, context.env) do
-        {:ok, value, binding, env} ->
-          binding = reorder_binding(binding, context.binding)
-          result_context = %{binding: binding, env: env, id: random_id()}
-          result = {:ok, value}
-          {result_context, result, nil}
+    language_binding = context.binding[language]
 
-        {:error, kind, error, stacktrace, code_error} ->
-          result = {:error, kind, error, stacktrace}
-          {context, result, code_error}
+    eval_result =
+      case language do
+        :elixir ->
+          eval(code, language_binding, context.env)
+        :erlang ->
+          eval_erlang(code, language_binding, context.env)
+      end
+
+    {result_context, result, code_error} =
+      case eval_result do
+            {:ok, value, new_binding, env} ->
+              language_binding = reorder_binding(new_binding, language_binding)
+              result_context = %{binding: %{context.binding|language => language_binding}, env: env, id: random_id()}
+              result = {:ok, value}
+              {result_context, result, nil}
+
+            {:error, kind, error, stacktrace, code_error} ->
+              result = {:error, kind, error, stacktrace}
+              {context, result, code_error}
       end
 
     evaluation_time_ms = get_execution_time_delta(start_time)
@@ -407,7 +417,7 @@ defmodule Livebook.Runtime.Evaluator do
 
   defp handle_call({:map_binding, ref, fun}, _from, state) do
     context = get_context(state, ref)
-    result = fun.(context.binding)
+    result = fun.(context.binding.elixir) # JMS - this is for intellisense
     {:reply, result, state}
   end
 
@@ -424,6 +434,27 @@ defmodule Livebook.Runtime.Evaluator do
 
   defp get_context(state, ref) do
     Map.get_lazy(state.contexts, ref, fn -> state.initial_context end)
+  end
+
+  defp eval_erlang(code, binding, env) do
+    try do
+      erl_code = :erlang.binary_to_list(code)
+      {:ok, tokens, _end_location} = :erl_scan.string(erl_code)
+      {:ok, expr_list} = :erl_parse.parse_exprs(tokens)
+      {:value, value, binding} = :erl_eval.exprs(expr_list, binding)
+      {:ok, value, binding, env}
+    catch
+      kind, error ->
+        stacktrace = prune_stacktrace(__STACKTRACE__)
+        code_error =
+          if code_error?(error) and (error.file == env.file and error.file != "nofile") do
+            %{line: error.line, description: error.description}
+          else
+            nil
+          end
+
+            {:error, kind, error, stacktrace, code_error}
+    end
   end
 
   defp eval(code, binding, env) do

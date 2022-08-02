@@ -8,12 +8,29 @@ defmodule LivebookWeb.SessionLive.InsertButtonsComponent do
       aria-label="insert new"
       data-el-insert-buttons>
       <div class={"w-full absolute z-10 hover:z-[11] #{if(@persistent, do: "opacity-100", else: "opacity-0")} hover:opacity-100 focus-within:opacity-100 flex space-x-2 justify-center items-center"}>
-        <button class="button-base button-small"
-          phx-click="insert_cell_below"
-          phx-value-type="code"
-          phx-value-section_id={@section_id}
-          phx-value-cell_id={@cell_id}
-          >+ Code</button>
+        <.menu id={"#{@id}-code-menu"} position="bottom-left">
+          <:toggle>
+            <button class="button-base button-small">+ Code</button>
+          </:toggle>
+          <:content>
+            <button class="menu-item text-gray-500"
+              role="menuitem"
+              phx-click="insert_cell_below"
+              phx-value-type="erlang"
+              phx-value-section_id={@section_id}
+              phx-value-cell_id={@cell_id}>
+              <span class="font-medium">Erlang</span>
+            </button>
+            <button class="menu-item text-gray-500"
+              role="menuitem"
+              phx-click="insert_cell_below"
+              phx-value-type="code"
+              phx-value-section_id={@section_id}
+              phx-value-cell_id={@cell_id}>
+              <span class="font-medium">Elixir</span>
+            </button>
+          </:content>
+        </.menu>
         <.menu id={"#{@id}-block-menu"} position="bottom-left">
           <:toggle>
             <button class="button-base button-small">+ Block</button>

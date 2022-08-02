@@ -136,6 +136,24 @@ defmodule Livebook.LiveMarkdown.Export do
     end
   end
 
+  defp render_cell(%Cell.Erlang{} = cell, ctx) do
+    delimiter = MarkdownHelpers.code_block_delimiter(cell.source)
+    code = get_code_cell_code(cell)
+    outputs = if ctx.include_outputs?, do: render_outputs(cell, ctx), else: []
+
+    metadata = cell_metadata(cell)
+
+    cell =
+      [delimiter, "erlang\n", code, "\n", delimiter]
+      |> prepend_metadata(metadata)
+
+    if outputs == [] do
+      cell
+    else
+      [cell, "\n\n", outputs]
+    end
+  end
+
   defp render_cell(%Cell.Smart{} = cell, ctx) do
     %{Cell.Code.new() | source: cell.source, outputs: cell.outputs}
     |> render_cell(ctx)
@@ -151,6 +169,14 @@ defmodule Livebook.LiveMarkdown.Export do
       %{},
       Map.take(cell, [:disable_formatting, :reevaluate_automatically]),
       Map.take(Cell.Code.new(), [:disable_formatting, :reevaluate_automatically])
+    )
+  end
+
+  defp cell_metadata(%Cell.Erlang{} = cell) do
+    put_unless_default(
+      %{},
+      Map.take(cell, [:disable_formatting, :reevaluate_automatically]),
+      Map.take(Cell.Erlang.new(), [:disable_formatting, :reevaluate_automatically])
     )
   end
 

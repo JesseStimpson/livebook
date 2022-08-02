@@ -1414,7 +1414,7 @@ defmodule Livebook.Session do
 
     locator = {container_ref_for_section(section), cell.id}
     base_locator = find_base_locator(state.data, cell, section)
-    Runtime.evaluate_code(state.data.runtime, cell.source, locator, base_locator, opts)
+    Runtime.evaluate_code(state.data.runtime, {cell.language, cell.source}, locator, base_locator, opts)
 
     evaluation_digest = :erlang.md5(cell.source)
     handle_operation(state, {:evaluation_started, self(), cell.id, evaluation_digest})

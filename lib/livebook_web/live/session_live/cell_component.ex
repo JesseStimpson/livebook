@@ -62,6 +62,7 @@ defmodule LivebookWeb.SessionLive.CellComponent do
           cell_id={@cell_view.id}
           validity={@cell_view.eval.validity}
           status={@cell_view.eval.status}
+          cell_type={@cell_view.type}
           reevaluate_automatically={@cell_view.reevaluate_automatically} />
       </:primary>
       <:secondary>
@@ -81,6 +82,49 @@ defmodule LivebookWeb.SessionLive.CellComponent do
           tag="primary"
           source_view={@cell_view.source_view}
           language="elixir"
+          intellisense />
+        <div class="absolute bottom-2 right-2">
+          <.cell_status id={@cell_view.id} cell_view={@cell_view} />
+        </div>
+      </div>
+      <.evaluation_outputs
+        cell_view={@cell_view}
+        socket={@socket}
+        session_id={@session_id} />
+    </.cell_body>
+    """
+  end
+
+  defp render_cell(%{cell_view: %{type: :erlang}} = assigns) do
+    ~H"""
+    <.cell_actions>
+      <:primary>
+        <.cell_evaluation_button
+          session_id={@session_id}
+          socket={@socket}
+          cell_id={@cell_view.id}
+          validity={@cell_view.eval.validity}
+          status={@cell_view.eval.status}
+          cell_type={@cell_view.type}
+          reevaluate_automatically={@cell_view.reevaluate_automatically} />
+      </:primary>
+      <:secondary>
+        <.amplify_output_button />
+        <.cell_settings_button cell_id={@cell_view.id} socket={@socket} session_id={@session_id} />
+        <.cell_link_button cell_id={@cell_view.id} />
+        <.move_cell_up_button cell_id={@cell_view.id} />
+        <.move_cell_down_button cell_id={@cell_view.id} />
+        <.delete_cell_button cell_id={@cell_view.id} />
+      </:secondary>
+    </.cell_actions>
+    <.cell_body>
+      <div class="relative">
+        <.live_component module={LivebookWeb.SessionLive.CellEditorComponent}
+          id={"#{@cell_view.id}-primary"}
+          cell_id={@cell_view.id}
+          tag="primary"
+          source_view={@cell_view.source_view}
+          language="erlang"
           intellisense />
         <div class="absolute bottom-2 right-2">
           <.cell_status id={@cell_view.id} cell_view={@cell_view} />
@@ -148,6 +192,7 @@ defmodule LivebookWeb.SessionLive.CellComponent do
           cell_id={@cell_view.id}
           validity={@cell_view.eval.validity}
           status={@cell_view.eval.status}
+          cell_type={@cell_view.type}
           reevaluate_automatically={false} />
       </:primary>
       <:secondary>
@@ -277,6 +322,7 @@ defmodule LivebookWeb.SessionLive.CellComponent do
       <.remix_icon icon="play-circle-fill" class="text-xl" />
       <span class="text-sm font-medium">
         <%= if(@validity == :evaluated, do: "Reevaluate", else: "Evaluate") %>
+        <%= @cell_type %>
       </span>
     </button>
     """

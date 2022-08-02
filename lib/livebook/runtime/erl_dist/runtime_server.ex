@@ -71,7 +71,7 @@ defmodule Livebook.Runtime.ErlDist.RuntimeServer do
 
   See `Livebook.Runtime.Evaluator` for more details.
   """
-  @spec evaluate_code(pid(), String.t(), Runtime.locator(), Runtime.locator(), keyword()) :: :ok
+  @spec evaluate_code(pid(), {atom(), String.t()}, Runtime.locator(), Runtime.locator(), keyword()) :: :ok
   def evaluate_code(pid, code, locator, base_locator, opts \\ []) do
     GenServer.cast(pid, {:evaluate_code, code, locator, base_locator, opts})
   end
@@ -302,7 +302,7 @@ defmodule Livebook.Runtime.ErlDist.RuntimeServer do
   end
 
   def handle_cast(
-        {:evaluate_code, code, {container_ref, evaluation_ref} = locator, base_locator, opts},
+        {:evaluate_code, {language, code}, {container_ref, evaluation_ref} = locator, base_locator, opts},
         state
       ) do
     state = ensure_evaluator(state, container_ref)
@@ -342,7 +342,7 @@ defmodule Livebook.Runtime.ErlDist.RuntimeServer do
 
     Evaluator.evaluate_code(
       state.evaluators[container_ref],
-      code,
+      {language, code},
       evaluation_ref,
       base_evaluation_ref,
       opts

@@ -12,9 +12,9 @@ defmodule Livebook.Notebook.Cell do
 
   @type id :: Utils.id()
 
-  @type t :: Cell.Markdown.t() | Cell.Code.t() | Cell.Smart.t()
+  @type t :: Cell.Markdown.t() | Cell.Code.t() | Cell.Smart.t() | Cell.Erlang.t()
 
-  @type type :: :markdown | :code | :smart
+  @type type :: :markdown | :code | :smart | :erlang
 
   @type indexed_output :: {non_neg_integer(), Livebook.Runtime.output()}
 
@@ -27,6 +27,7 @@ defmodule Livebook.Notebook.Cell do
   def new(:markdown), do: Cell.Markdown.new()
   def new(:code), do: Cell.Code.new()
   def new(:smart), do: Cell.Smart.new()
+  def new(:erlang), do: Cell.Erlang.new()
 
   @doc """
   Returns an atom representing the type of the given cell.
@@ -37,6 +38,7 @@ defmodule Livebook.Notebook.Cell do
   def type(%Cell.Code{}), do: :code
   def type(%Cell.Markdown{}), do: :markdown
   def type(%Cell.Smart{}), do: :smart
+  def type(%Cell.Erlang{}), do: :erlang
 
   @doc """
   Checks if the given cell can be evaluated.
@@ -45,6 +47,7 @@ defmodule Livebook.Notebook.Cell do
   def evaluable?(cell)
 
   def evaluable?(%Cell.Code{}), do: true
+  def evaluable?(%Cell.Erlang{}), do: true
   def evaluable?(%Cell.Smart{}), do: true
   def evaluable?(_cell), do: false
 
@@ -77,6 +80,7 @@ defmodule Livebook.Notebook.Cell do
   def setup?(cell)
 
   def setup?(%Cell.Code{id: @setup_cell_id}), do: true
+  def setup?(%Cell.Erlang{id: @setup_cell_id}), do: true
   def setup?(_cell), do: false
 
   @doc """

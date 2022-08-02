@@ -1,7 +1,7 @@
-defmodule Livebook.Notebook.Cell.Code do
+defmodule Livebook.Notebook.Cell.Erlang do
   @moduledoc false
 
-  # A cell with Elixir code.
+  # A cell with Erlang code.
   #
   # It consists of text content that the user can edit
   # and produces some output once evaluated.
@@ -14,7 +14,7 @@ defmodule Livebook.Notebook.Cell.Code do
   @type t :: %__MODULE__{
           id: Cell.id(),
           source: String.t(),
-          language: :elixir,
+          language: :erlang,
           outputs: list(Cell.indexed_output()),
           disable_formatting: boolean(),
           reevaluate_automatically: boolean()
@@ -28,7 +28,7 @@ defmodule Livebook.Notebook.Cell.Code do
     %__MODULE__{
       id: Utils.random_id(),
       source: "",
-      language: :elixir,
+      language: :erlang,
       outputs: [],
       disable_formatting: false,
       reevaluate_automatically: false

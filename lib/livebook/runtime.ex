@@ -343,7 +343,7 @@ defprotocol Livebook.Runtime do
     * `:smart_cell_ref` - a reference of the smart cell which code is
       to be evaluated, if applicable
   """
-  @spec evaluate_code(t(), String.t(), locator(), locator(), keyword()) :: :ok
+  @spec evaluate_code(t(), {atom(), String.t()}, locator(), locator(), keyword()) :: :ok
   def evaluate_code(runtime, code, locator, base_locator, opts \\ [])
 
   @doc """

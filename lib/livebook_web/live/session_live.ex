@@ -539,6 +539,9 @@ defmodule LivebookWeb.SessionLive do
   defp settings_component_for(%Cell.Code{}),
     do: LivebookWeb.SessionLive.CodeCellSettingsComponent
 
+  defp settings_component_for(%Cell.Erlang{}),
+    do: LivebookWeb.SessionLive.ErlangCellSettingsComponent
+
   defp branching_tooltip_attrs(name, parent_name) do
     direction = if String.length(name) >= 16, do: "left", else: "right"
 
@@ -1312,6 +1315,7 @@ defmodule LivebookWeb.SessionLive do
 
   defp cell_type_and_attrs_from_params(%{"type" => "markdown"}), do: {:markdown, %{}}
   defp cell_type_and_attrs_from_params(%{"type" => "code"}), do: {:code, %{}}
+  defp cell_type_and_attrs_from_params(%{"type" => "erlang"}), do: {:erlang, %{}}
 
   defp cell_type_and_attrs_from_params(%{"type" => "smart", "kind" => kind}) do
     {:smart, %{kind: kind}}
@@ -1526,6 +1530,18 @@ defmodule LivebookWeb.SessionLive do
     %{
       id: cell.id,
       type: :code,
+      source_view: source_view(cell.source, info.sources.primary),
+      eval: eval_info_to_view(cell, info.eval, data),
+      reevaluate_automatically: cell.reevaluate_automatically
+    }
+  end
+
+  defp cell_to_view(%Cell.Erlang{} = cell, data) do
+    info = data.cell_infos[cell.id]
+
+    %{
+      id: cell.id,
+      type: :erlang,
       source_view: source_view(cell.source, info.sources.primary),
       eval: eval_info_to_view(cell, info.eval, data),
       reevaluate_automatically: cell.reevaluate_automatically
